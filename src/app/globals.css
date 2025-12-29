@@ -44,3 +44,54 @@ body {
 .glass-card {
   @apply p-8 rounded-2xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md shadow-lg hover:scale-[1.02] transition;
 }
+
+.auth-wrapper {
+  @apply min-h-screen flex items-center justify-center bg-gradient-to-br from-[#ff2d20]/10 to-white px-4;
+}
+
+.auth-card {
+  @apply w-full max-w-md bg-white rounded-2xl shadow-xl p-8;
+}
+
+.auth-title {
+  @apply text-3xl font-bold text-center mb-2;
+}
+
+.auth-subtitle {
+  @apply text-center text-gray-500 mb-6;
+}
+
+.auth-input {
+  @apply w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff2d20];
+}
+
+.auth-btn {
+  @apply w-full py-3 rounded-lg font-semibold transition;
+}
+
+.btn-primary {
+  @apply bg-[#ff2d20] text-white hover:bg-[#ff2d20]/90;
+}
+
+.btn-google {
+  @apply border border-gray-300 hover:bg-gray-50;
+}
+
+.btn-facebook {
+  @apply bg-[#1877F2] text-white hover:bg-[#1877F2]/90;
+}
+
+.divider {
+  @apply flex items-center my-6 text-gray-400;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  @apply flex-1 border-t;
+}
+
+.tasks-wrapper { max-width: 600px; margin: 20px auto; }
+.tasks-header { display: flex; justify-content: space-between; align-items: center; }
+.tasks-form { display: flex; gap: 10px; margin-bottom: 20px; }
+.tasks-list li { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }

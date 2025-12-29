@@ -1,18 +1,20 @@
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+export async function api(url: string, options: any = {}) {
+  const baseUrl = 'http://127.0.0.1:8000/api';
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
 
-export async function api(endpoint: string, options: RequestInit = {}) {
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const res = await fetch(baseUrl + url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+    headers,
   });
 
-  return response.json();
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw data; // throw Laravel validation errors
+  }
+
+  return data;
 }

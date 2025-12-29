@@ -8,13 +8,13 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const submit = async () => {
-    setLoading(true);
-    setError('');
-
+    if (!email || !password) {
+      setError('Email and password are required');
+      return;
+    }
     try {
       const res = await api('/login', {
         method: 'POST',
@@ -25,22 +25,25 @@ export default function LoginPage() {
       router.push('/tasks');
     } catch (err: any) {
       setError(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
     }
   };
 
-  return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1 className="auth-title">Welcome Back 👋</h1>
+  const socialLogin = (provider: 'google' | 'facebook') => {
+    window.location.href = `http://127.0.0.1:8000/api/auth/${provider}/`;
+  };
 
-        {error && <p className="auth-error">{error}</p>}
+  return (
+    <div className="auth-wrapper">
+      <div className="auth-card">
+        <h1 className="auth-title">Welcome Back</h1>
+        <p className="auth-subtitle">Login to manage your tasks</p>
+
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
         <input
           className="auth-input"
+          type="email"
           placeholder="Email"
-          value={email}
           onChange={e => setEmail(e.target.value)}
         />
 
@@ -48,16 +51,31 @@ export default function LoginPage() {
           className="auth-input"
           type="password"
           placeholder="Password"
-          value={password}
           onChange={e => setPassword(e.target.value)}
         />
 
-        <button onClick={submit} disabled={loading} className="btn-primary w-full">
-          {loading ? 'Logging in...' : 'Login'}
+        <button onClick={submit} className="auth-btn btn-primary">
+          Login
         </button>
 
-        <p className="auth-footer">
-          Don’t have an account? <a href="/register">Sign up</a>
+        <div className="divider">OR</div>
+
+        <button
+          onClick={() => socialLogin('google')}
+          className="auth-btn btn-google flex items-center justify-center gap-2 mb-3"
+        >
+          Continue with Google
+        </button>
+
+        <button
+          onClick={() => socialLogin('facebook')}
+          className="auth-btn btn-facebook"
+        >
+          Continue with Facebook
+        </button>
+
+        <p className="text-center text-sm mt-4">
+          Don’t have an account? <a href="/register" className="text-[#ff2d20] font-semibold">Sign up</a>
         </p>
       </div>
     </div>

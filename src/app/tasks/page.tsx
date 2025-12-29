@@ -1,139 +1,259 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 
 interface Task {
   id: number;
   title: string;
-  description?: string;
+  description: string | null;
   is_completed: boolean;
 }
 
 export default function TasksPage() {
   const router = useRouter();
+
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // create task
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
 
-  // Get token from localStorage safely (client-side)
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (!storedToken) {
-      router.push('/login');
-      return;
-    }
-    setToken(storedToken);
+  // edit task
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
-    // Fetch tasks
-    api('/tasks', {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${storedToken}` },
-    })
-      .then(res => setTasks(Array.isArray(res.tasks) ? res.tasks : []))
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-  const addTask = async () => {
-    if (!title || !token) return alert('Title is required');
-
-    const newTask = await api('/tasks', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ title, description }),
-    });
-
-    setTasks(prev => [...prev, newTask]);
-    setTitle('');
-    setDescription('');
-  };
-
-  const toggleComplete = async (task: Task) => {
-    if (!token) return;
-    const updated = await api(`/tasks/${task.id}`, {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ is_completed: !task.is_completed }),
-    });
-
-    setTasks(prev => prev.map(t => (t.id === task.id ? updated : t)));
-  };
-
-  const deleteTask = async (task: Task) => {
-    if (!token) return;
-    await api(`/tasks/${task.id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    setTasks(prev => prev.filter(t => t.id !== task.id));
-  };
-
+  /* ================= LOGOUT ================= */
   const logout = async () => {
-    if (!token) return;
     try {
       await api('/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
+    } catch {}
 
     localStorage.removeItem('token');
     router.push('/login');
   };
 
-  if (loading) return <p>Loading tasks...</p>;
+  /* ================= FETCH TASKS ================= */
+  useEffect(() => {
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    api('/tasks', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => setTasks(res.tasks ?? []))
+      .catch(() => setError('Failed to load tasks'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  /* ================= ADD TASK ================= */
+  const addTask = async () => {
+    if (!title.trim()) return setError('Title is required');
+
+    try {
+      const res = await api('/tasks', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title, description }),
+      });
+
+      setTasks(prev => [...prev, res.task]);
+      setTitle('');
+      setDescription('');
+      setError('');
+    } catch {
+      setError('Failed to add task');
+    }
+  };
+
+  /* ================= EDIT TASK ================= */
+  const startEdit = (task: Task) => {
+    setEditId(task.id);
+    setEditTitle(task.title || '');
+    setEditDescription(task.description || '');
+  };
+
+  const updateTask = async () => {
+    if (!editId) return;
+
+    try {
+      const res = await api(`/tasks/${editId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+        }),
+      });
+
+      setTasks(prev =>
+        prev.map(t => (t.id === editId ? res.task : t))
+      );
+
+      setEditId(null);
+      setEditTitle('');
+      setEditDescription('');
+    } catch {
+      setError('Failed to update task');
+    }
+  };
+
+  /* ================= DELETE ================= */
+  const deleteTask = async (id: number) => {
+    if (!confirm('Delete this task?')) return;
+
+    try {
+      await api(`/tasks/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setTasks(prev => prev.filter(t => t.id !== id));
+    } catch {
+      setError('Failed to delete task');
+    }
+  };
+
+  if (loading) return <p className="p-4">Loading tasks...</p>;
 
   return (
-    <div style={{ maxWidth: '600px', margin: '20px auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>My Tasks</h1>
-        <button onClick={logout}>Logout</button>
+    <div className="max-w-5xl mx-auto p-6">
+
+      {/* ===== DASHBOARD HEADER ===== */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-[#FF2D20]">
+          TaskMate Dashboard
+        </h1>
+
+        <div className="space-x-3">
+          <button
+            onClick={() => router.push('/profile')}
+            className="border border-[#FF2D20] text-[#FF2D20] px-4 py-2 rounded hover:bg-[#FF2D20] hover:text-white transition"
+          >
+            Update Profile
+          </button>
+
+          <button
+            onClick={logout}
+            className="bg-[#FF2D20] text-white px-4 py-2 rounded hover:opacity-90"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
-      {/* Add Task Form */}
-      <div style={{ marginBottom: '20px' }}>
+      {error && <p className="text-red-600 mb-4">{error}</p>}
+
+      {/* ===== ADD TASK ===== */}
+      <div className="bg-white p-4 shadow rounded mb-6">
         <input
-          type="text"
-          placeholder="Task Title"
+          className="border p-2 w-full mb-2"
+          placeholder="Task title"
           value={title}
           onChange={e => setTitle(e.target.value)}
         />
         <input
-          type="text"
-          placeholder="Task Description"
+          className="border p-2 w-full mb-2"
+          placeholder="Task description"
           value={description}
           onChange={e => setDescription(e.target.value)}
         />
-        <button onClick={addTask}>Add Task</button>
+        <button
+          onClick={addTask}
+          className="bg-[#FF2D20] text-white px-4 py-2 rounded"
+        >
+          Add Task
+        </button>
       </div>
 
-      {/* Task List */}
-      {tasks.length === 0 ? (
-        <p>No tasks yet</p>
-      ) : (
-        <ul>
-          {tasks.map(task => (
-            <li key={task.id} style={{ marginBottom: '10px' }}>
-              <input
-                type="checkbox"
-                checked={task.is_completed}
-                onChange={() => toggleComplete(task)}
-              />
-              <strong>{task.title}</strong> - {task.description || 'No description'}
-              <button onClick={() => deleteTask(task)} style={{ marginLeft: '10px' }}>
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* ===== TASK TABLE ===== */}
+      <div className="bg-white shadow rounded">
+        <table className="w-full">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 text-left">Title</th>
+              <th className="p-3 text-left">Description</th>
+              <th className="p-3 text-left">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {tasks.map(task => (
+              <tr key={task.id} className="border-t">
+                <td className="p-3">
+                  {editId === task.id ? (
+                    <input
+                      className="border p-1 w-full"
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                    />
+                  ) : (
+                    task.title
+                  )}
+                </td>
+
+                <td className="p-3">
+                  {editId === task.id ? (
+                    <input
+                      className="border p-1 w-full"
+                      value={editDescription}
+                      onChange={e => setEditDescription(e.target.value)}
+                    />
+                  ) : (
+                    task.description || '—'
+                  )}
+                </td>
+
+                <td className="p-3 space-x-2">
+                  {editId === task.id ? (
+                    <>
+                      <button
+                        onClick={updateTask}
+                        className="text-green-600"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditId(null)}
+                        className="text-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => startEdit(task)}
+                        className="text-blue-600"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteTask(task.id)}
+                        className="text-red-600"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
