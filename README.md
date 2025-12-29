@@ -14,6 +14,8 @@ The frontend connects with the Laravel backend using APIs.
 - Token-based login
 
 ### Dashboard
+- Login with Google
+- Login with Facebook
 - View all tasks
 - Add new task
 - Edit task
